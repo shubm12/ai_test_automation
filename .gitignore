@@ -11,7 +11,7 @@ venv/
 
 # Pytest / Playwright
 .pytest_cache/
-backend/output/generated_scripts/*.py
+backend/output/generated_scripts/*
 !backend/output/generated_scripts/.gitkeep
 
 # Cache
