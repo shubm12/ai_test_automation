@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+*.egg-info/
+
+# Environment / secrets
+.env
+!.env.example
+
+# Pytest / Playwright
+.pytest_cache/
+backend/output/generated_scripts/*.py
+!backend/output/generated_scripts/.gitkeep
+
+# Cache
+backend/cache/*.json
+!backend/cache/.gitkeep
+
+# Frontend (Node)
+node_modules/
+dist/
+build/
+.next/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Prototyping notebook (superseded by backend/, contains a hardcoded API key - rotate that key if you haven't)
+Untitled113.ipynb

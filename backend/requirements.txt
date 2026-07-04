@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+groq
+playwright
+pytest
+pytest-playwright
+pytest-json-report
+python-dotenv
+pydantic
