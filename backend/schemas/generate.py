@@ -18,6 +18,7 @@ class GeneratedScript(BaseModel):
     test_case: TestCase
     script_id: str
     file_name: str
+    code: str
 
 
 class GenerateResponse(BaseModel):
