@@ -1,0 +1,127 @@
+:root {
+  --bg: #eef1f4;
+  --bg-raised: #ffffff;
+  --bg-sunken: #e2e7eb;
+  --text: #161c22;
+  --text-dim: #57646e;
+  --border: #ccd5db;
+  --code-bg: #e4e9ed;
+
+  --accent: #157b70;
+  --accent-soft: #d8ece9;
+  --warn: #a86412;
+  --warn-soft: #f3e3cc;
+  --bad: #a13a26;
+  --bad-soft: #f4dcd5;
+
+  --font-body: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  --font-display: ui-monospace, 'Cascadia Code', 'JetBrains Mono', 'SFMono-Regular', Consolas,
+    monospace;
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #10151b;
+    --bg-raised: #171e26;
+    --bg-sunken: #0b0f14;
+    --text: #e7ecf0;
+    --text-dim: #8fa0ac;
+    --border: #2a333c;
+    --code-bg: #0d1318;
+
+    --accent: #3fc9b8;
+    --accent-soft: #163330;
+    --warn: #e0a23f;
+    --warn-soft: #3a2c14;
+    --bad: #e0715a;
+    --bad-soft: #3a1f18;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #10151b;
+  --bg-raised: #171e26;
+  --bg-sunken: #0b0f14;
+  --text: #e7ecf0;
+  --text-dim: #8fa0ac;
+  --border: #2a333c;
+  --code-bg: #0d1318;
+
+  --accent: #3fc9b8;
+  --accent-soft: #163330;
+  --warn: #e0a23f;
+  --warn-soft: #3a2c14;
+  --bad: #e0715a;
+  --bad-soft: #3a1f18;
+}
+
+:root[data-theme='light'] {
+  --bg: #eef1f4;
+  --bg-raised: #ffffff;
+  --bg-sunken: #e2e7eb;
+  --text: #161c22;
+  --text-dim: #57646e;
+  --border: #ccd5db;
+  --code-bg: #e4e9ed;
+
+  --accent: #157b70;
+  --accent-soft: #d8ece9;
+  --warn: #a86412;
+  --warn-soft: #f3e3cc;
+  --bad: #a13a26;
+  --bad-soft: #f4dcd5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  min-height: 100svh;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  text-wrap: balance;
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+a {
+  color: var(--accent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

@@ -46,6 +46,8 @@ async def generate_tests(request: StoryRequest) -> GenerateResponse:
         file_path.write_text(code, encoding="utf-8")
 
         script_id = executor_service.register(file_path, test_case.title)
-        scripts.append(GeneratedScript(test_case=test_case, script_id=script_id, file_name=file_name))
+        scripts.append(
+            GeneratedScript(test_case=test_case, script_id=script_id, file_name=file_name, code=code)
+        )
 
     return GenerateResponse(scripts=scripts)
