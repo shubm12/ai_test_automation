@@ -23,6 +23,11 @@ export async function generateTests({ story, url }) {
   return asJson(response)
 }
 
+export async function getGenerateProgress() {
+  const response = await fetch(`${API_BASE}/generate-progress`)
+  return asJson(response)
+}
+
 export async function executeTest(scriptId) {
   let response
   try {

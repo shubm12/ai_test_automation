@@ -2,15 +2,8 @@ import { useEffect, useState } from 'react'
 import StoryForm from './components/StoryForm'
 import SummaryBar from './components/SummaryBar'
 import TestCaseCard from './components/TestCaseCard'
-import { executeTest, generateTests } from './api'
+import { executeTest, generateTests, getGenerateProgress } from './api'
 import './App.css'
-
-const GENERATION_PHASES = [
-  'Resolving the story into a navigable flow…',
-  'Scanning the live DOM for real selectors…',
-  'Drafting structured test cases…',
-  'Generating a grounded Playwright script per test case…',
-]
 
 function useTheme() {
   const [theme, setTheme] = useState(
@@ -32,15 +25,28 @@ export default function App() {
   const [generating, setGenerating] = useState(false)
   const [generateError, setGenerateError] = useState(null)
   const [runningAll, setRunningAll] = useState(false)
-  const [phase, setPhase] = useState(0)
+  const [progress, setProgress] = useState(null)
 
   useEffect(() => {
-    if (!generating) return
-    setPhase(0)
-    const id = setInterval(() => {
-      setPhase((p) => (p + 1) % GENERATION_PHASES.length)
-    }, 3200)
-    return () => clearInterval(id)
+    if (!generating) {
+      setProgress(null)
+      return
+    }
+    let cancelled = false
+    const poll = async () => {
+      try {
+        const p = await getGenerateProgress()
+        if (!cancelled && p && p.stage !== 'idle') setProgress(p)
+      } catch {
+        // backend busy or unreachable for a beat - keep the last known stage
+      }
+    }
+    poll()
+    const id = setInterval(poll, 700)
+    return () => {
+      cancelled = true
+      clearInterval(id)
+    }
   }, [generating])
 
   async function handleGenerate({ story, url }) {
@@ -111,11 +117,21 @@ export default function App() {
         {generating && (
           <div className="generating-panel" role="status">
             <span className="spinner" aria-hidden="true" />
-            <div>
-              <p className="generating-panel__phase">{GENERATION_PHASES[phase]}</p>
+            <div className="generating-panel__body">
+              <p className="generating-panel__phase">
+                {progress?.message || 'Starting the pipeline…'}
+              </p>
+              {progress?.total ? (
+                <div className="generating-panel__bar" aria-hidden="true">
+                  <div
+                    className="generating-panel__bar-fill"
+                    style={{ width: `${Math.round((progress.current / progress.total) * 100)}%` }}
+                  />
+                </div>
+              ) : null}
               <p className="generating-panel__hint">
-                Usually 30–90s — a real browser is being driven and the LLM is called several
-                times.
+                Live status — every script is executed against the real site before it's shown
+                here.
               </p>
             </div>
           </div>
