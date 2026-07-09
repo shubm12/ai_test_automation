@@ -32,7 +32,7 @@ async def generate_tests(request: StoryRequest) -> GenerateResponse:
 
     flow_steps = flow_resolver.resolve(request.url, request.story)
     element_map = await dom_scanner.scan(request.url, flow_steps)
-    raw_test_cases = test_case_generator.generate(request.story)
+    raw_test_cases = test_case_generator.generate(request.story, element_map)
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 

@@ -19,10 +19,28 @@ You will be given:
 
 STRICT RULES (do not break these):
 - Always start the test with page.goto() using the EXACT page_url provided. Never use a relative path.
+- Immediately after page.goto(), add: page.set_default_timeout(5000)
+  so a wrong assumption fails in 5 seconds instead of stalling for Playwright's 30-second default.
 - You may ONLY use selectors that appear in the provided element list.
 - Do NOT invent, guess, or assume any selector that isn't explicitly listed.
 - If you need an element that is not present, insert a comment instead of a selector:
   # SELECTOR_NOT_FOUND: <description of what was needed>
+- Respect each element's "page" field: an element is only visible on the page/state it was observed
+  on. Never interact with or assert an element from a page the test has not navigated to at that
+  point in the flow. Do NOT assume an action navigates somewhere (e.g. adding an item does NOT open
+  the cart). If a listed element can perform the needed navigation (e.g. a cart link), add that
+  click step first; if no listed element reaches that page, emit # SELECTOR_NOT_FOUND instead.
+- Page labels of the form "X_after_<action>" show the page state AFTER performing <action>. If an
+  element from state "X" does not also appear in "X_after_<action>", it no longer exists once that
+  action is performed - do not click or assert it again afterwards (e.g. if "Add to cart" is absent
+  from the after-state and "Remove" appears instead, a second "Add to cart" click is impossible;
+  interact with "Remove" or assert the state change instead).
+- Use the MINIMUM number of clicks needed. Never insert a click the test case does not require.
+  Clicking a link (tag "a") navigates to a NEW page whose elements are unknown unless the map has a
+  page group for it - after clicking a link with no matching "..._after_..." group, you may not use
+  ANY selector from the previous page, and you have no selectors for the new page, so the test is
+  broken. If a needed element (e.g. an add-to-cart button) is directly available on the current
+  page, use it there instead of navigating through a link first.
 - Write a single test function using the `page` fixture from pytest-playwright.
 - The function must start with: def test_ and accept `page` as a parameter.
 - Add `from playwright.sync_api import expect` at the top if you use `expect`.
@@ -69,6 +87,7 @@ REAL ELEMENTS (only use selectors from here):
             slim.append(
                 {
                     "page": el.get("page"),
+                    "tag": el.get("tag"),
                     "text": text,
                     "selector": el.get("recommended_selector"),
                 }
