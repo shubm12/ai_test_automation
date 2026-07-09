@@ -95,10 +95,19 @@ def clean_elements(raw_elements: list[dict], page_label: str) -> list[dict]:
 
 
 class DomScannerService:
-    async def scan(self, url: str, flow_steps: list[FlowStep]) -> list[dict]:
+    async def scan(self, url: str, flow_steps: list[FlowStep]) -> tuple[list[dict], list[str]]:
+        """Returns (element_map, warnings).
+
+        Warnings record every flow step whose hint matched nothing on the live
+        page. A silently skipped step means the browser never reached the state
+        the remaining steps assume, so pages past that point were likely never
+        scanned - the warning makes that visible to the API caller instead of
+        letting a stalled scan masquerade as a complete one.
+        """
         from playwright.async_api import async_playwright
 
         all_elements: list[dict] = []
+        warnings: list[str] = []
         seen_selectors: set[str] = set()
         page_counter = 0
         current_label = "landing_page"
@@ -132,10 +141,23 @@ class DomScannerService:
                     _record(raw, current_label)
 
                 elif action == "fill":
-                    await self._fill_by_hint(page, step.get("field_hint", ""), step.get("value", ""))
+                    hint = step.get("field_hint", "")
+                    filled = await self._fill_by_hint(page, hint, step.get("value", ""))
+                    if not filled:
+                        warnings.append(
+                            f"fill '{hint}' matched no input on '{current_label}' - "
+                            "this step was skipped; later pages may not have been scanned"
+                        )
 
                 elif action == "click":
-                    await self._click_by_hint(page, step.get("target_hint", ""))
+                    hint = step.get("target_hint", "")
+                    clicked = await self._click_by_hint(page, hint)
+                    if not clicked:
+                        warnings.append(
+                            f"click '{hint}' matched no element on '{current_label}' - "
+                            "this step was skipped; later pages may not have been scanned"
+                        )
+                        continue
                     # Clicks change DOM state (badges, toggled buttons, toasts) without
                     # necessarily triggering a "navigate" step in the resolved flow - a
                     # click on a single-page app rarely changes the URL, so the LLM-derived
@@ -146,38 +168,87 @@ class DomScannerService:
                     except Exception:
                         pass
                     raw = await page.evaluate(EXTRACT_SCRIPT)
-                    _record(raw, f"{current_label}_after_{self._slugify(step.get('target_hint', 'click'))}")
+                    _record(raw, f"{current_label}_after_{self._slugify(hint or 'click')}")
 
             await browser.close()
 
-        return all_elements
+        return all_elements, warnings
 
     @staticmethod
     def _slugify(text: str) -> str:
         return "_".join(text.lower().split())
 
     @staticmethod
-    async def _fill_by_hint(page, field_hint: str, value: str) -> None:
-        hint = field_hint.lower()
+    def _normalize(text: str) -> str:
+        """Lowercase and strip non-alphanumerics so 'First Name', 'first-name'
+        and 'firstName' all compare equal."""
+        return "".join(ch for ch in text.lower() if ch.isalnum())
+
+    @classmethod
+    async def _fill_by_hint(cls, page, field_hint: str, value: str) -> bool:
+        hint = cls._normalize(field_hint)
+        if not hint:
+            return False
         candidates = await page.query_selector_all("input, textarea")
         for el in candidates:
-            attrs = {
-                "placeholder": (await el.get_attribute("placeholder")) or "",
-                "name": (await el.get_attribute("name")) or "",
-                "id": (await el.get_attribute("id")) or "",
-                "aria-label": (await el.get_attribute("aria-label")) or "",
-            }
-            haystack = " ".join(attrs.values()).lower()
-            if hint and hint in haystack:
-                await el.fill(value)
-                return
+            attrs = [
+                (await el.get_attribute("placeholder")) or "",
+                (await el.get_attribute("name")) or "",
+                (await el.get_attribute("id")) or "",
+                (await el.get_attribute("aria-label")) or "",
+                (await el.get_attribute("data-test")) or "",
+                (await el.get_attribute("data-testid")) or "",
+            ]
+            haystack = cls._normalize(" ".join(attrs))
+            if hint in haystack:
+                # Hidden/disabled fields can match by attributes; skip them and
+                # keep looking instead of hanging on an uninteractable element.
+                if not await el.is_visible():
+                    continue
+                try:
+                    await el.fill(value, timeout=3000)
+                    return True
+                except Exception:
+                    continue
+        return False
 
-    @staticmethod
-    async def _click_by_hint(page, target_hint: str) -> None:
-        hint = target_hint.lower()
+    @classmethod
+    async def _click_by_hint(cls, page, target_hint: str) -> bool:
+        # Words like "button"/"link" describe the element kind, not its label -
+        # "checkout button" must match a button whose text is just "Checkout".
+        hint = cls._normalize(
+            " ".join(
+                w for w in target_hint.lower().split() if w not in ("button", "link", "icon", "the", "a", "an")
+            )
+        )
+        if not hint:
+            return False
         candidates = await page.query_selector_all('button, a, input[type="submit"], [role="button"]')
         for el in candidates:
-            text = ((await el.inner_text()) or (await el.get_attribute("value")) or "").strip().lower()
-            if hint and (hint in text or text in hint):
-                await el.click()
-                return
+            text = cls._normalize(
+                ((await el.inner_text()) or (await el.get_attribute("value")) or "").strip()
+            )
+            attr_ids = cls._normalize(
+                " ".join(
+                    [
+                        (await el.get_attribute("id")) or "",
+                        (await el.get_attribute("data-test")) or "",
+                        (await el.get_attribute("data-testid")) or "",
+                        (await el.get_attribute("aria-label")) or "",
+                    ]
+                )
+            )
+            if (text and (hint in text or text in hint)) or (attr_ids and hint in attr_ids):
+                # Attribute matching can hit elements that exist in the DOM but
+                # aren't visible (e.g. a hidden menu's close button). Skip those
+                # and keep looking; a short timeout caps the cost of an element
+                # that is visible but not clickable, rather than crashing the
+                # whole scan after Playwright's 30s default.
+                if not await el.is_visible():
+                    continue
+                try:
+                    await el.click(timeout=3000)
+                    return True
+                except Exception:
+                    continue
+        return False

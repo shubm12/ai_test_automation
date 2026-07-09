@@ -76,6 +76,53 @@ REAL ELEMENTS (only use selectors from here):
 
         return validate_and_retry(_generate_once, max_retries=2)
 
+    def repair(
+        self,
+        test_case: dict,
+        url: str,
+        element_map: list[dict],
+        failed_code: str,
+        failure_detail: str,
+    ) -> str:
+        """Regenerate a script that failed its dry run, feeding the actual
+        runtime failure back to the model as evidence. Live failure output is
+        far more corrective than any abstract rule - it names the exact
+        selector/assertion that broke against the real page."""
+        slim_elements = self._slim_elements(element_map)
+        user_prompt = f"""The following generated test FAILED when executed against the live page.
+Fix it. The failure output tells you exactly what went wrong (e.g. a selector that never appeared,
+an element that no longer exists at that point in the flow, or an assertion on the wrong page).
+Remove or rework the failing interaction - all STRICT RULES still apply, including using ONLY
+selectors from the element list.
+
+TEST CASE:
+{json.dumps(test_case)}
+
+PAGE URL:
+{url}
+
+REAL ELEMENTS (only use selectors from here):
+{json.dumps(slim_elements)}
+
+FAILED CODE:
+{failed_code}
+
+FAILURE OUTPUT:
+{failure_detail[:2000]}
+"""
+
+        def _repair_once() -> str:
+            raw = self._llm.complete(
+                SYSTEM_PROMPT,
+                user_prompt,
+                json_mode=False,
+                max_tokens=2048,
+                temperature=0.2,
+            )
+            return self._strip_code_fences(raw)
+
+        return validate_and_retry(_repair_once, max_retries=1)
+
     @staticmethod
     def _slim_elements(element_map: list[dict]) -> list[dict]:
         """Only the fields the prompt actually needs - the full scan payload

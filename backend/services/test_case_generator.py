@@ -80,7 +80,7 @@ REAL UI ELEMENTS OBSERVED ON THE LIVE APPLICATION (grouped by page/state):
             SYSTEM_PROMPT,
             user_prompt,
             json_mode=True,
-            max_tokens=2048,
+            max_tokens=3000,
             temperature=0.3,
         )
         data = json.loads(raw)

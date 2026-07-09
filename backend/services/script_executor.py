@@ -2,6 +2,12 @@
 
 Uses pytest-json-report instead of scraping stdout, so status parsing is
 structural rather than regex-based.
+
+Two execution modes:
+- run(script_id): headed + slowed down, for the user-facing /execute-tests
+  call where watching the browser is the point.
+- dry_run(file_path): headless + fast, used internally at generation time to
+  verify a script actually works before it is returned to the caller.
 """
 import json
 import subprocess
@@ -35,33 +41,45 @@ class ScriptExecutorService:
         file_path: Path = entry["file_path"]
         title: str = entry["title"]
 
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            report_path = Path(tmp_dir) / "report.json"
-            result = subprocess.run(
-                [
-                    "pytest",
-                    str(file_path),
-                    "-v",
-                    "--tb=short",
-                    "--headed",
-                    "--slowmo=500",
-                    "--json-report",
-                    f"--json-report-file={report_path}",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=120,
-            )
-
-            status, stderr = self._parse_report(report_path, result)
-
+        status, stdout, stderr = self._run_pytest(file_path, headed=True)
         return ExecuteResult(
             title=title,
             file=file_path.name,
             status=status,
-            stdout=result.stdout,
+            stdout=stdout,
             stderr=stderr,
         )
+
+    def dry_run(self, file_path: Path) -> tuple[str, str | None]:
+        """Headless verification pass. Returns (status, failure_detail)."""
+        status, _, stderr = self._run_pytest(file_path, headed=False)
+        return status, stderr
+
+    @staticmethod
+    def _run_pytest(file_path: Path, *, headed: bool) -> tuple[str, str, str | None]:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            report_path = Path(tmp_dir) / "report.json"
+            cmd = [
+                "pytest",
+                str(file_path),
+                "-v",
+                "--tb=short",
+                "--json-report",
+                f"--json-report-file={report_path}",
+            ]
+            if headed:
+                cmd += ["--headed", "--slowmo=500"]
+
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=180 if headed else 120,
+            )
+
+            status, stderr = ScriptExecutorService._parse_report(report_path, result)
+
+        return status, result.stdout, stderr
 
     @staticmethod
     def _parse_report(report_path: Path, result: subprocess.CompletedProcess) -> tuple[str, str | None]:
@@ -79,7 +97,8 @@ class ScriptExecutorService:
         stderr = None
         if outcome != "passed":
             call = tests[0].get("call", {})
-            stderr = call.get("longrepr") or result.stderr
+            longrepr = call.get("longrepr")
+            stderr = longrepr if isinstance(longrepr, str) else result.stderr
 
         return (outcome, stderr)
 

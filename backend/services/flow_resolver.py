@@ -57,7 +57,7 @@ class FlowResolverService:
             FLOW_EXTRACTION_PROMPT,
             story,
             json_mode=True,
-            max_tokens=1024,
+            max_tokens=2500,
             temperature=0.2,
         )
         data = json.loads(raw)
