@@ -21,36 +21,41 @@ export default function TestCaseCard({ index, script, result, onRun }) {
     <article className={`test-case test-case--${status}`}>
       <header className="test-case__header">
         <span className="test-case__index">{String(index + 1).padStart(2, '0')}</span>
-        <h3 className="test-case__title">{testCase.title}</h3>
-        <StatusBadge status={status} />
-        <button
-          type="button"
-          className="btn btn--run"
-          onClick={() => onRun(script.script_id)}
-          disabled={isRunning}
-        >
-          {isRunning ? 'Running…' : 'Run'}
-        </button>
+        <div className="test-case__heading">
+          <h3 className="test-case__title">{testCase.title}</h3>
+          <p className="test-case__file">{fileName}</p>
+        </div>
+        <div className="test-case__actions">
+          <StatusBadge status={status} />
+          <button
+            type="button"
+            className="btn btn--run"
+            onClick={() => onRun(script.script_id)}
+            disabled={isRunning}
+          >
+            {isRunning ? 'Running…' : 'Run'}
+          </button>
+        </div>
       </header>
 
-      <p className="test-case__file">{fileName}</p>
-
       <div className="test-case__grid">
-        <div>
-          <h4>Preconditions</h4>
-          <List items={testCase.preconditions} />
-        </div>
-        <div>
+        <section className="test-case__section test-case__section--steps">
           <h4>Steps</h4>
           <List items={testCase.steps} />
-        </div>
-        <div>
-          <h4>Assertions</h4>
-          <List items={testCase.assertions} />
-        </div>
-        <div>
-          <h4>Edge cases</h4>
-          <List items={testCase.edge_cases} />
+        </section>
+        <div className="test-case__side">
+          <section className="test-case__section">
+            <h4>Preconditions</h4>
+            <List items={testCase.preconditions} />
+          </section>
+          <section className="test-case__section">
+            <h4>Assertions</h4>
+            <List items={testCase.assertions} />
+          </section>
+          <section className="test-case__section">
+            <h4>Edge cases</h4>
+            <List items={testCase.edge_cases} />
+          </section>
         </div>
       </div>
 

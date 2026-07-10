@@ -4,7 +4,7 @@ const PLACEHOLDER = `A user logs in with username "standard_user" and password "
 
 export default function StoryForm({ onSubmit, busy }) {
   const [story, setStory] = useState('')
-  const [url, setUrl] = useState('https://www.saucedemo.com')
+  const [url, setUrl] = useState('')
 
   const canSubmit = story.trim().length > 0 && url.trim().length > 0 && !busy
 
@@ -38,6 +38,7 @@ export default function StoryForm({ onSubmit, busy }) {
         <input
           id="url"
           type="url"
+          placeholder="https://www.saucedemo.com"
           value={url}
           onChange={(event) => setUrl(event.target.value)}
           disabled={busy}

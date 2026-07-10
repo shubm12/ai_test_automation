@@ -306,7 +306,7 @@
 
 .test-case__header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
 }
 
@@ -314,10 +314,28 @@
   font-family: var(--font-display);
   font-size: 13px;
   color: var(--text-dim);
+  /* optically align with the first line of the title */
+  line-height: 24px;
+}
+
+.test-case__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  /* keep badge + Run pinned to the title line, not centered over two lines */
+  margin-top: 1px;
+}
+
+.test-case__heading {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .test-case__title {
-  flex: 1;
   font-size: 17px;
 }
 
@@ -325,18 +343,43 @@
   font-family: var(--font-display);
   font-size: 12px;
   color: var(--text-dim);
-  margin-top: -8px;
 }
 
 .test-case__grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px 24px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.test-case__side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.test-case__section {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  min-width: 0;
+  /* page labels like product_catalog_page_after_add_to_cart_... are single
+     unbreakable tokens - without this they escape the box */
+  overflow-wrap: anywhere;
+}
+
+.test-case__section--steps {
+  height: 100%;
 }
 
 @media (max-width: 640px) {
   .test-case__grid {
     grid-template-columns: 1fr;
+  }
+
+  .test-case__section--steps {
+    height: auto;
   }
 }
 
